@@ -5,13 +5,12 @@ from ase.optimize import BFGS
 from ase.calculators.emt import EMT
 from ase.io import write
 from ase import Atoms
-import numpy as np
 
 
 # Function to create a butane molecule
 def create_butane():
-    # Define positions of atoms in the butane molecule
-    positions = [
+    # Create the butane molecule
+    butane = Atoms('C4H10', positions=[
         [0.0, 0.0, 0.0],  # C1
         [1.54, 0.0, 0.0],  # C2
         [2.54, 1.54, 0.0],  # C3
@@ -26,9 +25,8 @@ def create_butane():
         [4.08, 2.32, -0.78],  # H8
         [4.08, 1.54, 0.78],  # H9
         [4.86, 1.54, 0.0],  # H10
-    ]
-    symbols = ['C', 'C', 'C', 'C', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H', 'H']
-    butane = Atoms(symbols=symbols, positions=positions)
+    ])
+    butane.calc = EMT()
     return butane
 
 
@@ -45,12 +43,20 @@ surface.set_constraint(FixAtoms(mask=mask))
 print("Erstellen von Butan-Konformern...")
 butane = create_butane()
 
+# Optimize the butane molecule
+dyn = BFGS(butane)
+dyn.run(fmax=0.05)
+
 # Generate different conformers by rotating around the C-C bonds
 conformers = [butane.copy() for _ in range(3)]
 angles = [0, 120, 240]  # Different angles for different conformers
 
 for i, conf in enumerate(conformers):
     conf.rotate(angles[i], 'z')
+    # Additional optimization after rotation
+    conf.calc = EMT()
+    dyn = BFGS(conf)
+    dyn.run(fmax=0.05)
 
 # Step 3: Place the adsorbate approximately in the middle of the supercell along the x and y axes
 print("Platzierung der Konformer auf der Oberfläche...")
